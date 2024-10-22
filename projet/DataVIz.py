@@ -16,7 +16,7 @@ def page_data_visualisation():
     """)
     
     try:
-        gdf = load_geojson('regions.geojson')
+        gdf = load_geojson('./projet/regions.geojson')
         df = load_data('data_regional.csv')
         
         print_table(df)
