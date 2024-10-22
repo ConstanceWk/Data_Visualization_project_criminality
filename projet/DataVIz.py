@@ -17,7 +17,7 @@ def page_data_visualisation():
     
     try:
         gdf = load_geojson('./projet/regions.geojson')
-        df = load_data('data_regional.csv')
+        df = load_data('./projet/data_regional.csv')
         
         print_table(df)
         ensemble_viz_faits_region(df)
