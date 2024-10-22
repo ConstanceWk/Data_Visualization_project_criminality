@@ -14,7 +14,7 @@ from wordcloud import WordCloud
 
 def load_geojson(local_path):
     # we load the geojson file to have the coordinates of regions
-    gdf = gpd.read_file(./projet/regions.geojson)
+    gdf = gpd.read_file("./projet/regions.geojson")
     return gdf
 
 def load_data(filepath):
