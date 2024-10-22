@@ -5,3 +5,4 @@ wordcloud
 folium
 streamlit_folium
 pandas
+altair.vegalite.v4
