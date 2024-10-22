@@ -6,3 +6,4 @@ wordcloud
 folium
 streamlit_folium
 pandas
+geopandas
