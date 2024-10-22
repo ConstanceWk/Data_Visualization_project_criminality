@@ -29,7 +29,7 @@ st.sidebar.markdown(
 
 
 
-image_path = "photo_profil.png"
+image_path = "./projet/photo_profil.png"
 
 # Convertir l'image en base64 pour l'inclure dans le HTML
 def get_base64_image(image_path):

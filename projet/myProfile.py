@@ -10,7 +10,7 @@ def page_biographie():
     I am **Constance WALUSIAK**, and I am excited to share with you a little about myself, my skills, and my data visualisation of the criminality in France. 
     """)
   
-    cv_file_path = "./CV_WALUSIAK_CONSTANCE.pdf"  
+    cv_file_path = "./projet/CV_WALUSIAK_CONSTANCE.pdf"  
 
     with open(cv_file_path, "rb") as cv_file:
         cv_data = cv_file.read()
