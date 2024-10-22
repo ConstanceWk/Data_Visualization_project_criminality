@@ -1,10 +1,11 @@
 streamlit
+pandas
 matplotlib
+geopandas
 plotly
+numpy
 seaborn
 wordcloud
 folium
 streamlit_folium
-pandas
-geopandas
 geojson
