@@ -1,5 +1,5 @@
 import streamlit as st
-
+from functions import *
 # In this page, I have some resume of me with my curriculum
 def page_biographie():
 
@@ -22,13 +22,6 @@ def page_biographie():
         mime="application/pdf"
     )
 
-    st.sidebar.header("My Skills 💡")
-    st.sidebar.write("""
-    - 🧠 **Curiosity**: Always eager to learn and explore new things.
-    - 🎨 **Innovation**: Bringing creative solutions to real-world problems.
-    - 🔥 **Perseverance**: Never give up, always strive for excellence.
-    - 💼 **Problem Solving**: Approach challenges with enthusiasm and logic.
-    """)
 
     st.write("""
     ## 👩‍💼 About Me
@@ -37,6 +30,22 @@ def page_biographie():
 
     I thrive in environments that encourage **creative thinking** and problem solving. 💡
              """)
+
+
+    parcours_aca()
+    passions_extra_scolaire()
+    repartition_competences()
+    wordcloud()
+    progression_ia()
+
+
+    st.sidebar.header("My Skills 💡")
+    st.sidebar.write("""
+    - 🧠 **Curiosity**: Always eager to learn and explore new things.
+    - 🎨 **Innovation**: Bringing creative solutions to real-world problems.
+    - 🔥 **Perseverance**: Never give up, always strive for excellence.
+    - 💼 **Problem Solving**: Approach challenges with enthusiasm and logic.
+    """)
 
 
     st.write("""

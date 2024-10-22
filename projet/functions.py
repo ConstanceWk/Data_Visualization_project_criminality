@@ -7,8 +7,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 import geopandas as gpd
 import numpy as np
+from wordcloud import WordCloud
 
-# In this file, we have all functions to data visualize.
+
+# ------------------ VISUALISATION OF MY DATASET -------------------- #
 
 def load_geojson(local_path):
     # we load the geojson file to have the coordinates of regions
@@ -48,22 +50,29 @@ def print_table(df):
                 st.write(f"No data available for {selected_value} in column {selected_filter_column}.")
 
 def plot_pie_chart(df):
+   
+    st.header("Pie chart view of facts by region")
     
-    # This function is for visualize the classe for each region
-    st.header("Visualisation dynamique par classe")
-    
-    classe_selected = st.selectbox("Sélectionnez une classe pour la visualisation", df['classe'].unique())
+    classe_selected = st.selectbox("Select the fact of the crime :", df['classe'].unique())
     filtered_data = df[df['classe'] == classe_selected]
     data_grouped = filtered_data.groupby('Code.région')['faits'].sum().reset_index()
     fig = px.pie(data_grouped, names='Code.région', values='faits', 
-                 title=f"Répartition des faits pour la classe '{classe_selected}'")
+                 title=f"Distribution of facts for the class '{classe_selected}'")
 
     st.plotly_chart(fig)
+    st.markdown("""
+    We can take an example of homicides. **Aude**, **Seine-Saint-Denis**, and **Vaucluse** have reported significant incidents of homicide, 
+    raising concerns about safety and community well-being. These areas face unique challenges that may 
+    contribute to higher crime rates, including socio-economic factors and urban dynamics. 
+    Understanding the specific context of these regions is crucial for developing effective strategies 
+    to combat violence and support affected communities. By analyzing these trends, we can work towards 
+    a safer environment for all residents.
+    """)
 
 def plot_mapbox(df, gdf):
-    # This function is for maping the classe you want in France map
-    st.header("Carte interactive choroplèthe avec Mapbox")
-    classe_selected = st.selectbox("Sélectionnez une classe pour la carte", df['classe'].unique())
+    
+    st.header("Interactive crime map of France (using Mapbox)")
+    classe_selected = st.selectbox("Select the fact:", df['classe'].unique())
  
     filtered_data = df[df['classe'] == classe_selected]
     filtered_data['Code.région'] = filtered_data['Code.région'].astype(str)
@@ -89,69 +98,67 @@ def plot_mapbox(df, gdf):
         zoom=5,
         center={"lat": 46.603354, "lon": 1.888334},  
         opacity=0.6,
-        title=f"Répartition des faits pour la classe '{classe_selected}'"
+        title=f"Distribution of facts for the crime :'{classe_selected}'"
     )
   
     fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
     st.plotly_chart(fig)
 
+    st.markdown("""
+    The interactive map of crimes uses a color gradient from violet to yellow, 
+    where the intensity of yellow indicates a higher prevalence of crime. 
+    As you explore the map, we can say that **Île-de-France** is the most affected region, 
+    marked by deeper shades of yellow. This visualization not only highlights the areas 
+    most impacted by crime but also serves as a critical tool for understanding regional disparities. 
+    """)
+
 def plot_3d_barchart_map(df, gdf):
-    st.header("Carte interactive avec barres 3D distinctes et fond de carte")
+    st.header("Interactive map with distinct 3D bars for each facts")
 
     if not isinstance(gdf, gpd.GeoDataFrame):
         gdf = gpd.GeoDataFrame(gdf, geometry=gpd.GeoSeries(gdf['geometry']))
-    
-    # Conversion des colonnes pour qu'elles aient le même type (string)
+  
     df['Code.région'] = df['Code.région'].astype(str)
     gdf['region_code'] = gdf['code'].astype(str)
-    
-    # Ajouter les informations de la région via GeoDataFrame
+
     merged_data = pd.merge(df, gdf[['region_code', 'geometry']], 
                            left_on='Code.région', right_on='region_code', how='left')
 
-    # Conversion des géométries en GeoJSON
     merged_data = gpd.GeoDataFrame(merged_data, geometry='geometry')
 
-    # Création des barres 3D pour chaque région et classe
     fig = go.Figure()
 
-    # Couleurs distinctes pour chaque type de classe
     colors = px.colors.qualitative.Plotly
     classes = df['classe'].unique()
-    
-    # Décalage pour éviter l'empiètement
-    offset = 0.02  # Ajustez cette valeur pour modifier l'écart
+
+    offset = 0.02
 
     for i, classe in enumerate(classes):
         classe_data = merged_data[merged_data['classe'] == classe]
-        
-        # Coordonnées des centroids pour les barres
+
         x = classe_data['geometry'].centroid.x.tolist()
         y = classe_data['geometry'].centroid.y.tolist()
-        z = np.zeros(len(classe_data)).tolist()  # Bas des barres
-        dz = classe_data['faits'].tolist()  # Hauteur des barres
-        
-        # Ajouter un décalage pour espacer les barres
-        x_offset = [xi + (i * offset) for xi in x]  # Décalage en x
-        y_offset = [yi + (i * offset) for yi in y]  # Décalage en y
-        
-        # Ajout des barres individuelles pour chaque classe
+        z = np.zeros(len(classe_data)).tolist() 
+        dz = classe_data['faits'].tolist()  
+
+        x_offset = [xi + (i * offset) for xi in x] 
+        y_offset = [yi + (i * offset) for yi in y]  
+      
         for j in range(len(x)):
-            # Ajouter le nom uniquement pour la première barre de chaque classe
+
             name = classe if j == 0 else None
             fig.add_trace(go.Scatter3d(
-                x=[x_offset[j], x_offset[j], x_offset[j]],  # x est constant pour la barre
-                y=[y_offset[j], y_offset[j], y_offset[j]],  # y est constant pour la barre
-                z=[0, dz[j], 0],  # Les trois points définissent la barre
+                x=[x_offset[j], x_offset[j], x_offset[j]],  
+                y=[y_offset[j], y_offset[j], y_offset[j]], 
+                z=[0, dz[j], 0], 
                 mode='lines',
-                line=dict(color=colors[i % len(colors)], width=6),  # Largeur de barre ajustée
-                name=name,  # Nom pour la légende (uniquement pour la première barre)
-                showlegend=name is not None,  # Afficher la légende uniquement pour la première barre
-                hoverinfo='text',  # Informations à afficher au survol
-                hovertext=classe  # Texte à afficher au survol
+                line=dict(color=colors[i % len(colors)], width=6),  
+                name=name,  
+                showlegend=name is not None, 
+                hoverinfo='text',  
+                hovertext=classe 
             ))
 
-    # Ajout du fond de carte
     for _, region in gdf.iterrows():
         geometry = region['geometry']
         
@@ -171,7 +178,7 @@ def plot_3d_barchart_map(df, gdf):
                 showlegend=False
             ))
     
-    # Mise à jour du layout
+ 
     fig.update_layout(
         scene=dict(
             xaxis_title='Longitude',
@@ -180,65 +187,66 @@ def plot_3d_barchart_map(df, gdf):
             xaxis=dict(showgrid=False),
             yaxis=dict(showgrid=False),
         ),
-        title="Répartition des faits par région avec barres 3D distinctes et fond de carte",
         margin=dict(r=0, t=0, l=0, b=0),
         showlegend=True
     )
 
-    # Affichage de la carte
     st.plotly_chart(fig)
+    st.markdown("""
+    This analysis aims to understand and visualize the significance and alarming numbers associated with different types of crimes. 
+    In particular, we observe that **Île-de-France** stands out with a staggering number of incidents categorized as "theft without violence against individuals." 
+    This type of crime significantly outnumbers other offenses, highlighting the urgent need for attention and intervention in this area. 
+    By breaking down crime statistics by type, we can better comprehend the challenges faced by communities and develop tailored strategies to address these pressing issues.
+    """)
 
 def courbes_vict_mec(df):
-
-    """Fonction pour visualiser les faits subis par les victimes et réalisés par les mis en cause."""
-    
-    # Filtrer les données pour les victimes
+    st.header("Distribution of victims / implicated parties")
     df_victimes = df[df['unité.de.compte'] == 'victime']
-    
-    # Filtrer les données pour les mis en cause
     df_mis_en_cause = df[df['unité.de.compte'] == 'Mis en cause']
 
-    # Création d'un graphique pour les victimes
     fig_victimes = px.bar(df_victimes, 
                           x='Code.région', 
                           y='faits', 
                           color='classe', 
-                          title='Faits subis par les victimes',
+                          title='Facts suffered by the victims',
                           labels={'Code.région': 'Code de région', 'faits': 'Nombre de faits'},
                           text='faits')
     
-    # Afficher le graphique des victimes
     st.plotly_chart(fig_victimes)
 
-    # Création d'un graphique pour les mis en cause
     fig_mis_en_cause = px.bar(df_mis_en_cause, 
                               x='Code.région', 
                               y='faits', 
                               color='classe', 
-                              title='Faits réalisés par les mis en cause',
+                              title='Facts performed by the accused',
                               labels={'Code.région': 'Code de région', 'faits': 'Nombre de faits'},
                               text='faits')
-    
-    # Afficher le graphique des mis en cause
+
     st.plotly_chart(fig_mis_en_cause)
+    st.markdown("""
+    In this analysis, I have separated the data into two distinct graphs: one for the **accused** and another for the **victims** in relation to the crimes committed. 
+    The data reveals a concerning trend: individuals recorded as victims have suffered from various serious offenses, including homicides, 
+    voluntary assaults, intra-family voluntary assaults, other voluntary assaults, sexual violence, and fraud. 
+    These categories highlight the severity and variety of crimes impacting victims in our dataset.
+
+    On the other hand, the accused individuals in our dataset are predominantly recorded for drug trafficking and drug use offenses. 
+    This stark contrast between the types of crimes associated with victims and those linked to the accused raises important questions 
+    about the nature of violence and crime within our communities.
+
+    Moreover, it is crucial to note that the dataset does not capture all incidents, leaving gaps in our understanding of crime dynamics. 
+    This incomplete representation may affect our conclusions and highlights the need for comprehensive data collection to fully understand 
+    the complexities surrounding crime and victimization in society.
+    """)
 
 def map_taux_crim(df, gdf):
-    
-    # Calculer le pourcentage de criminalité par région
+    st.header("Map with Crime rate.")
     df['pourcentage_criminalite'] = (df['faits'] / df['POP']) * 100
 
-    # Vérifier les types de données
-    print(df['Code.région'].dtype)  # Afficher le type de données pour le débogage
-    print(gdf['code'].dtype)  # Afficher le type de données pour le débogage
+    df['Code.région'] = df['Code.région'].astype(str)
+    gdf['code'] = gdf['code'].astype(str)
 
-    # Convertir les types de données si nécessaire
-    df['Code.région'] = df['Code.région'].astype(str)  # Assurez-vous que c'est une chaîne
-    gdf['code'] = gdf['code'].astype(str)  # Assurez-vous que c'est une chaîne
-
-    # Fusionner le DataFrame avec le GeoDataFrame sur le code région
     merged = gdf.merge(df, left_on='code', right_on='Code.région', how='left')
 
-    # Vérifier si la géométrie est de type Polygon et obtenir les centroids
     if merged.geometry.geom_type.iloc[0] != 'Point':
         merged['centroid'] = merged.geometry.centroid
         lat = merged.centroid.y
@@ -247,59 +255,52 @@ def map_taux_crim(df, gdf):
         lat = merged.geometry.y
         lon = merged.geometry.x
 
-    min_color = 0
-    max_color = 0.6
-    # Créer la carte de chaleur
-    fig = px.density_mapbox(
+    fig = px.scatter_mapbox(
         merged,
         lat=lat,
         lon=lon,
-        z='pourcentage_criminalite',
-        radius=10,
-        center=dict(lat=46.6034, lon=1.8883),
+        size='pourcentage_criminalite', 
+        color='pourcentage_criminalite',  
+        color_continuous_scale=px.colors.sequential.Viridis,  
+        size_max=15,  
         zoom=5,
         mapbox_style="open-street-map",
-        color_continuous_scale=px.colors.sequential.Plasma,  # Exemple de palette
-        range_color=[min_color, max_color] # Ajustez selon vos données
+        range_color=[0, 2]  
     )
 
-    # Afficher la carte
     st.plotly_chart(fig)
 
+    st.markdown("""
+    The crime rate map visually represents the levels of criminal activity across different regions, utilizing a color gradient 
+    that ranges from violet to yellow. In this map, deeper shades of yellow indicate higher crime rates, with some areas 
+    reaching an alarming **0.70% crime rate** in the vicinity of Paris. 
+
+    This visualization effectively highlights regions that are more affected by crime, allowing us to pinpoint areas 
+    that may require enhanced security measures and community support. By understanding the distribution of crime rates, 
+    we can better address the underlying issues contributing to these statistics and work towards fostering safer communities 
+    for all residents.
+    """)
+
 def dynamic_visualization(df):
-    # Streamlit app
-    st.title("Visualisation Dynamique des Faits et de la Population")
+    st.header("Pie chart view of facts by region")
 
-    # Step 1: Selection of region code
     regions = df['Code.région'].unique()
-    selected_region = st.selectbox("Sélectionnez le Code Région", regions)
+    selected_region = st.selectbox("Select the region", regions)
 
-    # Step 2: Selection of year using a slider
     selected_year = st.slider("Sélectionnez l'âge (Annee)", min_value=int(df['annee'].min()), max_value=int(df['annee'].max()), step=1)
 
-    # Filter the dataset based on selected region and year
     filtered_df = df[(df['Code.région'] == selected_region) & (df['annee'] == selected_year)]
 
-    # Check if the dataframe is empty
     if filtered_df.empty:
         st.write("Pas de données pour cette région et cet âge.")
     else:
-        # Step 3: Create the pie chart using 'faits' (a numerical column)
         fig, ax = plt.subplots()
-
-        # Plotting the pie chart with 'faits'
-        labels = ['classe']  # Pie chart labels
-        sizes = [filtered_df['classe'].values[0]]  # Numerical values for the pie chart
+        labels = ['classe']  
+        sizes = [filtered_df['classe'].values[0]] 
 
         ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-
-        # Equal aspect ratio ensures that pie is drawn as a circle.
         ax.axis('equal')  
-
-        # Display the pie chart in Streamlit
         st.pyplot(fig)
-
-        # Step 4: Displaying additional details with a bar chart for 'faits' and line plot for 'millPOP'
         fig, ax = plt.subplots(figsize=(10, 5))
 
         ax.bar(filtered_df['Code.région'], filtered_df['faits'], color='b', alpha=0.6, label='Faits')
@@ -309,25 +310,19 @@ def dynamic_visualization(df):
         ax.set_xlabel('Code Région')
         ax.set_ylabel('Nombre')
         ax.legend()
-
-        # Display the plot in Streamlit
         st.pyplot(fig)
 
 def dynamic_plot(df):
-    # Crée la figure
+   
     fig = go.Figure()
 
-    # Obtenir les années et les régions uniques
     years = sorted(df['annee'].unique())
     regions = df['Code.région'].unique()
 
-    # Ajouter une seule trace pour chaque année
     for year in years:
-        # Filtrer les données par année et regrouper les faits par région
         filtered_df = df[df['annee'] == year].groupby('Code.région').agg({'faits': 'sum'}).reset_index()
         filtered_df = filtered_df.sort_values('Code.région')
 
-        # Ajouter une trace pour chaque année
         fig.add_trace(
             go.Scatter(
                 visible=False,
@@ -340,58 +335,58 @@ def dynamic_plot(df):
             )
         )
 
-    # Rendre la première trace visible
     fig.data[0].visible = True
 
-    # Créer et ajouter le slider pour les années
     steps = []
     for i in range(len(fig.data)):
         step = dict(
             method="update",
             args=[{"visible": [False] * len(fig.data)},
-                  {"title": f"Données pour l'année: {years[i]}"}],  # titre du layout
+                  {"title": f"Data for the year: {years[i]}"}],  
         )
-        step["args"][0]["visible"][i] = True  # Rendre la trace i visible
+        step["args"][0]["visible"][i] = True
         steps.append(step)
 
     sliders = [dict(
-        active=0,  # Commencer avec la première année
+        active=0, 
         currentvalue={"prefix": "Année: "},
         pad={"t": 50},
         steps=steps
     )]
 
-    # Mettre à jour le layout avec le slider
     fig.update_layout(
         sliders=sliders,
-        title="Visualisation Dynamique des Faits par Région",
         xaxis_title="Code Région",
-        yaxis_title="Nombre total de Faits",
+        yaxis_title="Number of Crimes",
         template="plotly_white"
     )
 
-    # Afficher le graphique dans Streamlit
     st.plotly_chart(fig)
 
 def ensemble_viz_faits_region(df):
-    # Interface utilisateur dans Streamlit
-    st.title('Visualisation du Nombre de Faits et de la Population par Région')
-    st.write("Sélectionnez une visualisation :")
+    
+    st.header('Visualization of the number of crimes in each region by age')
 
-    # Agrégation des données : somme des faits pour chaque région et chaque année
+    st.markdown("""
+    The analysis of crime rates by age across different regions reveals a notable consistency. 
+    While we observe a steady trend in the number of incidents among various age groups, 
+    there is a slight spike at the age of 20. This small variation could indicate 
+    a unique set of circumstances that affect this age group, possibly linked to 
+    social and economic factors that lead to higher crime rates during early adulthood. 
+    Understanding these dynamics is essential for crafting targeted interventions that address 
+    the root causes of delinquency, ultimately fostering safer communities for all.
+    """)
     df_agg = df.groupby(['annee', 'Code.région'], as_index=False).agg({
-        'faits': 'sum',  # On somme les faits pour chaque région et année
-        'POP': 'mean'    # La population reste constante pour chaque région
+        'faits': 'sum',  
+        'POP': 'mean'  
     })
 
-    # Sélection de l'animation via un bouton radio
     selection = st.radio(
-        "Sélectionnez l'animation :",
-        ("Faits - Scatter", "Population - Bar", "Graphique")
+        "Select the visualization :",
+        ("Scatter", "Bar", "Chart")
     )
 
-    # Génération du graphique en fonction de la sélection
-    if selection == 'Faits - Scatter':
+    if selection == 'Scatter':
         fig = px.scatter(
             df_agg, 
             x="Code.région", 
@@ -400,28 +395,104 @@ def ensemble_viz_faits_region(df):
             size="faits", 
             color="Code.région", 
             hover_name="Code.région", 
-            size_max=20,  # ajustement de la taille maximale pour plus de clarté
-            title="Évolution du nombre de faits par région",
-            range_y=[0, max(df_agg['faits']) + 10]  # ajustement automatique du range
+            size_max=20, 
+            range_y=[0, max(df_agg['faits']) + 10]
         )
         st.plotly_chart(fig)
-    elif selection == 'Population - Bar':
+    elif selection == 'Bar':
         fig = px.bar(
             df_agg, 
             x="Code.région", 
             y="faits", 
             color="Code.région", 
             animation_frame="annee", 
-            title="Évolution de la population par région",
-            range_y=[0, max(df_agg['faits']) + 100000]  # ajustement automatique du range
+            range_y=[0, max(df_agg['faits']) + 100000] 
         )
         st.plotly_chart(fig)
-    elif selection == 'Graphique':
-        dynamic_plot(df)  # Appeler directement la fonction pour le graphique dynamique
+    elif selection == 'Chart':
+        dynamic_plot(df)  
+
+# ------------------ MY PROFIL -------------------- #
 
 
+def parcours_aca():
+    data_gantt = {
+    'Task': ["High School: L'Espérance", "EFREI Paris", "Internship M1: Innowide", "Internship M2: ???"],
+    'Début': ["2018-09-01", "2021-09-01", "2024-11-04", "2026-04-01"],
+    'Fin': ["2021-06-30", "2026-06-30", "2025-03-28", "2026-08-30"],
+    'Couleur': ['#FF6347', '#1E90FF', '#32CD32', '#FFD700']
+    }
 
+    df_gantt = pd.DataFrame(data_gantt)
 
+    
+    fig_gantt = px.timeline(df_gantt, x_start="Début", x_end="Fin", y="Task",
+                            title="My Academic Background",
+                            color='Task',  
+                            color_discrete_sequence=df_gantt['Couleur'])  
 
+    fig_gantt.update_yaxes(categoryorder="total ascending")  
+    fig_gantt.update_xaxes(type='date')
+
+    st.plotly_chart(fig_gantt)
+
+def repartition_competences():
+   
+    data_competences = {
+        'Compétences': ['Python', 'Machine Learning', 'Data Visualization', 'Database'],
+        'Pourcentage': [40, 30, 30, 20]
+    }
+
+    df_competences = pd.DataFrame(data_competences)
+
+    fig_pie = px.pie(df_competences, names='Compétences', values='Pourcentage',
+                    title="A little more about my technical skills ...")
+
+    st.plotly_chart(fig_pie)
+
+def wordcloud():
+
+    texte_interets = """
+    Sport, Intelligence Artificielle, Visualisation de données, Recherche, Technologie Générative, Projets, Innovation
+    """
+
+    wordcloud = WordCloud(width=800, height=400, background_color="white").generate(texte_interets)
+
+    st.write("My interests (using wordCloud)")
+    fig, ax = plt.subplots()
+    ax.imshow(wordcloud, interpolation='bilinear')
+    ax.axis("off")
+    st.pyplot(fig)
+
+def progression_ia():
+    data_progression = {
+        'Année': [ 2022, 2023, 2024, 2025],
+        'project': [1, 3, 4, 4]
+    }
+
+    df_progression = pd.DataFrame(data_progression)
+
+    fig_progression = px.line(df_progression, x='Année', y='project',
+                            title="Progress of my AI projects",
+                            markers=True)
+
+    st.plotly_chart(fig_progression)
+
+def passions_extra_scolaire():
+    data_passions = {
+        'Activités': ['Sport', 'Couture', 'Crochet', 'Peinture', 'Cuisine'],
+        'Engagement': [80, 60, 70, 50, 90] 
+    }
+
+    df_passions = pd.DataFrame(data_passions)
+
+    fig_radar = px.line_polar(df_passions, r='Engagement', theta='Activités', 
+                              line_close=True, title="My passions outside school", 
+                              range_r=[0, 100], 
+                              color_discrete_sequence=['#FF6347'])
+
+    fig_radar.update_traces(fill='toself')
+
+    st.plotly_chart(fig_radar)
 
 
