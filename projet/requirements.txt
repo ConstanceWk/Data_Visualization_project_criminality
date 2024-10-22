@@ -10,4 +10,3 @@ folium
 streamlit_folium
 geojson
 pyogrio
---upgrade pyogrio
